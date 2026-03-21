@@ -108,7 +108,7 @@ fi
 
 # SSL certificate provisioning
 echo -e "${YELLOW}🔒 Checking SSL certificate...${NC}"
-DOMAIN="bead-it.org"
+DOMAIN="bead-it.base44.app"
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 
 if [ ! -f "$CERT_PATH" ]; then
@@ -123,9 +123,9 @@ if [ ! -f "$CERT_PATH" ]; then
     docker-compose -f docker-compose.prod.yml stop nginx || true
 
     sudo certbot certonly --standalone \
-        -d "$DOMAIN" -d "www.$DOMAIN" \
+        -d "$DOMAIN" \
         --non-interactive --agree-tos \
-        --email "${CERTBOT_EMAIL:-admin@bead-it.org}" \
+        --email "${CERTBOT_EMAIL:-admin@bead-it.base44.app}" \
         --expand
 
     # Set up auto-renewal cron job if not already present
@@ -147,12 +147,10 @@ echo ""
 echo "Service URLs:"
 echo "  - API (internal):  http://localhost:8000"
 echo "  - Web (internal):  http://localhost:3000"
-echo "  - Public HTTPS:    https://bead-it.org"
-echo "  - Public HTTPS:    https://www.bead-it.org"
+echo "  - Public HTTPS:    https://bead-it.base44.app"
 echo ""
 echo "DNS records required (set at your registrar):"
-echo "  A     bead-it.org      ->  <your-server-public-ip>"
-echo "  A     www.bead-it.org  ->  <your-server-public-ip>"
+echo "  A     bead-it.base44.app  ->  <your-server-public-ip>"
 echo ""
 echo "Firewall rules required:"
 echo "  sudo ufw allow 80/tcp"

@@ -60,7 +60,7 @@ DEBUG=false
 
 # Frontend
 VITE_BASE44_APP_ID=your_production_app_id
-VITE_BASE44_APP_BASE_URL=https://bead-it.org/api
+VITE_BASE44_APP_BASE_URL=https://bead-it.base44.app/api
 NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
 NEXT_PUBLIC_POWERBI_EMBED_URL=your_powerbi_url
 
