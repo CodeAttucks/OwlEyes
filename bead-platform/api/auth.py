@@ -1,4 +1,3 @@
-import os
 import time
 from typing import Any
 
@@ -7,31 +6,36 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
+from .secrets import SecretError, get_bool_secret, get_required_secret, get_secret
+
 bearer_scheme = HTTPBearer()
 
 _OPENID_CACHE: dict[str, Any] = {"data": None, "expires_at": 0.0}
 
 
 def _is_auth_enabled() -> bool:
-    return os.getenv("AUTH_ENABLED", "false").strip().lower() == "true"
+    try:
+        return get_bool_secret("AUTH_ENABLED", default=False)
+    except SecretError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 def _tenant_id() -> str:
-    tenant = os.getenv("AZURE_AD_TENANT_ID", "").strip()
-    if not tenant:
-        raise HTTPException(status_code=500, detail="Missing AZURE_AD_TENANT_ID")
-    return tenant
+    try:
+        return get_required_secret("AZURE_AD_TENANT_ID")
+    except SecretError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 def _client_id() -> str:
-    client_id = os.getenv("AZURE_AD_CLIENT_ID", "").strip()
-    if not client_id:
-        raise HTTPException(status_code=500, detail="Missing AZURE_AD_CLIENT_ID")
-    return client_id
+    try:
+        return get_required_secret("AZURE_AD_CLIENT_ID")
+    except SecretError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 def _issuer() -> str:
-    explicit_issuer = os.getenv("AZURE_AD_ISSUER", "").strip()
+    explicit_issuer = get_secret("AZURE_AD_ISSUER", "")
     if explicit_issuer:
         return explicit_issuer
     tenant = _tenant_id()
@@ -39,14 +43,14 @@ def _issuer() -> str:
 
 
 def _audience() -> str:
-    explicit_aud = os.getenv("AZURE_AD_AUDIENCE", "").strip()
+    explicit_aud = get_secret("AZURE_AD_AUDIENCE", "")
     if explicit_aud:
         return explicit_aud
     return _client_id()
 
 
 def _openid_config_url() -> str:
-    explicit_url = os.getenv("AZURE_AD_OPENID_CONFIG_URL", "").strip()
+    explicit_url = get_secret("AZURE_AD_OPENID_CONFIG_URL", "")
     if explicit_url:
         return explicit_url
     tenant = _tenant_id()

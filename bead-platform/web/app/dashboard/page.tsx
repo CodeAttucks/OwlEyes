@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { fetchProjects, fetchFiberRoutes, fetchReports } from '@/lib/api'
+import { fetchProjects, fetchFiberRoutes, fetchReports } from '../../lib/api'
 
 interface Project {
   id: string

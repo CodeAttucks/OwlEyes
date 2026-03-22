@@ -1,0 +1,71 @@
+name: Staging Security Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate-staging-security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run staging security validator
+        id: validate
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts
+          chmod +x bead-platform/scripts/validate-staging-security.sh
+
+          EXPECTED_DOMAIN=bead-it.base44.app \
+          REQUIRE_TLS_CERT_FILES=0 \
+          REPORT_FILE=artifacts/staging-security-report.md \
+          bead-platform/scripts/validate-staging-security.sh | tee artifacts/staging-security-console.log
+
+          status=${PIPESTATUS[0]}
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-security-validation-${{ github.run_id }}
+          path: |
+            artifacts/staging-security-report.md
+            artifacts/staging-security-console.log
+          if-no-files-found: error
+
+      - name: Post report to protected Edge Function
+        if: always() && secrets.STAGING_VALIDATION_EDGE_URL != '' && secrets.STAGING_VALIDATION_EDGE_TOKEN != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg repo "${GITHUB_REPOSITORY}" \
+            --arg pr "${{ github.event.pull_request.number }}" \
+            --arg sha "${GITHUB_SHA}" \
+            --arg run_id "${GITHUB_RUN_ID}" \
+            --arg run_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg report "$(cat artifacts/staging-security-report.md)" \
+            '{repository:$repo,pull_request_number:$pr,sha:$sha,run_id:$run_id,run_url:$run_url,report:$report}')
+
+          curl --fail --show-error --silent \
+            -X POST "${{ secrets.STAGING_VALIDATION_EDGE_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.STAGING_VALIDATION_EDGE_TOKEN }}" \
+            -d "${payload}" >/dev/null
+
+      - name: Fail job on validator failure
+        if: steps.validate.outputs.exit_code != '0'
+        shell: bash
+        run: |
+          echo "Validator failed with exit code ${{ steps.validate.outputs.exit_code }}"
+          exit 1

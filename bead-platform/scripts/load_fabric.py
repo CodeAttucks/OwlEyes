@@ -1,18 +1,19 @@
-import os
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from api.secrets import SecretError, get_required_secret, get_secret
 from etl.fcc_fabric_loader import load_fabric, load_bdc
 
 
 def load_from_blob(blob_name: str) -> str:
     """Download a blob to a temp file and return the temp path."""
     from azure.storage.blob import BlobServiceClient
-    conn_str = os.environ["AZURE_STORAGE_CONNECTION_STRING"]
-    container = os.environ.get("AZURE_STORAGE_CONTAINER", "uploads")
+
+    conn_str = get_required_secret("AZURE_STORAGE_CONNECTION_STRING")
+    container = get_secret("AZURE_STORAGE_CONTAINER", "uploads")
     client = BlobServiceClient.from_connection_string(conn_str)
     blob = client.get_container_client(container).get_blob_client(blob_name)
     tmp = tempfile.NamedTemporaryFile(suffix=".csv", delete=False)
@@ -22,13 +23,17 @@ def load_from_blob(blob_name: str) -> str:
 
 
 if __name__ == "__main__":
-    use_blob = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+    use_blob = get_secret("AZURE_STORAGE_CONNECTION_STRING")
 
     # --- FCC Fabric ---
     fabric_local = Path("data/fabric_data.csv")
     if use_blob:
         print("Downloading fabric_data.csv from Azure Blob...")
-        fabric_path = load_from_blob("fabric_data.csv")
+        try:
+            fabric_path = load_from_blob("fabric_data.csv")
+        except SecretError as exc:
+            print(f"ERROR: {exc}")
+            sys.exit(1)
     elif fabric_local.exists():
         fabric_path = str(fabric_local)
     else:
@@ -43,7 +48,11 @@ if __name__ == "__main__":
     bdc_local = Path("data/bdc_data.csv")
     if use_blob:
         print("Downloading bdc_data.csv from Azure Blob...")
-        bdc_path = load_from_blob("bdc_data.csv")
+        try:
+            bdc_path = load_from_blob("bdc_data.csv")
+        except SecretError as exc:
+            print(f"ERROR: {exc}")
+            sys.exit(1)
     elif bdc_local.exists():
         bdc_path = str(bdc_local)
     else:
