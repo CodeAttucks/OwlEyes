@@ -1,8 +1,9 @@
-import os
 from typing import Any
 
 import httpx
 from fastapi import APIRouter, Body, HTTPException
+
+from ..secrets import SecretError, get_required_secret
 
 router = APIRouter(prefix="/base44", tags=["base44"])
 
@@ -27,16 +28,12 @@ ALLOWED_PROJECT_FIELDS = {
 
 
 def _base44_config() -> tuple[str, str]:
-    app_id = os.getenv("BASE44_APP_ID", "").strip()
-    api_key = os.getenv("BASE44_API_KEY", "").strip()
-    base_url = os.getenv("BASE44_API_BASE_URL", "").strip().rstrip("/")
-
-    if not app_id:
-        raise HTTPException(status_code=500, detail="Missing BASE44_APP_ID")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="Missing BASE44_API_KEY")
-    if not base_url:
-        raise HTTPException(status_code=500, detail="Missing BASE44_API_BASE_URL")
+    try:
+        app_id = get_required_secret("BASE44_APP_ID")
+        api_key = get_required_secret("BASE44_API_KEY")
+        base_url = get_required_secret("BASE44_API_BASE_URL").rstrip("/")
+    except SecretError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return f"{base_url}/api/apps/{app_id}/entities/Project", api_key
 

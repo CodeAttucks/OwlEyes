@@ -15,6 +15,59 @@ This runbook upgrades the current stack to Azure services in two phases.
 
 ## Phase 2: Upgrade
 
+### Quick Start (Scripted)
+
+Run these from the `bead-platform` directory after `az login`.
+
+1. Provision Azure PostgreSQL Flexible Server and import SQL files:
+
+```bash
+export RESOURCE_GROUP=rg-bead-prod
+export LOCATION=eastus
+export POSTGRES_SERVER=bead-pg-prod
+export POSTGRES_DB=bead
+export POSTGRES_ADMIN_USER=bead_admin
+export POSTGRES_ADMIN_PASSWORD='<strong-password>'
+
+chmod +x scripts/provision-azure-postgres.sh
+./scripts/provision-azure-postgres.sh
+```
+
+2. Build and deploy API container to App Service:
+
+```bash
+export APP_SERVICE_PLAN=asp-bead-prod
+export APP_SERVICE_NAME=bead-api-prod
+export ACR_NAME=beadacrprod001
+
+# Preferred: resolve sensitive values from Key Vault
+export KEY_VAULT_NAME='kv-bead-prod'
+export SECRET_KEY_SECRET_NAME='SECRET_KEY'
+export POSTGRES_ADMIN_PASSWORD_SECRET_NAME='POSTGRES_ADMIN_PASSWORD'
+export AZURE_AD_TENANT_ID_SECRET_NAME='AZURE_AD_TENANT_ID'
+export AZURE_AD_CLIENT_ID_SECRET_NAME='AZURE_AD_CLIENT_ID'
+export AZURE_AD_AUDIENCE_SECRET_NAME='AZURE_AD_AUDIENCE'
+
+# Optional overrides (if secret names differ from defaults)
+# export SECRET_KEY_SECRET_NAME='bead-api-secret-key'
+# export AZURE_AD_CLIENT_ID_SECRET_NAME='bead-api-client-id'
+
+# Alternative (fallback): set values directly if not using Key Vault
+# export SECRET_KEY='<random-secret>'
+# export AZURE_AD_TENANT_ID='<tenant-id>'
+# export AZURE_AD_CLIENT_ID='<api-app-client-id>'
+# export AZURE_AD_AUDIENCE='api://<api-app-client-id-or-uri>'
+
+chmod +x scripts/deploy-api-appservice.sh
+./scripts/deploy-api-appservice.sh
+```
+
+3. Validate deployment:
+
+```bash
+curl -i "https://${APP_SERVICE_NAME}.azurewebsites.net/health"
+```
+
 ### 1. Move database to Azure PostgreSQL + PostGIS
 
 1. Create Azure Database for PostgreSQL Flexible Server.
@@ -47,6 +100,57 @@ Minimum required settings:
 - `AZURE_AD_AUDIENCE`
 - `AZURE_AD_ISSUER`
 - `AZURE_AD_OPENID_CONFIG_URL`
+
+### Secrets (Key Vault)
+
+The deployment script supports resolving sensitive values from Azure Key Vault.
+
+Use these environment variables before running `scripts/deploy-api-appservice.sh`:
+
+- `KEY_VAULT_NAME`
+- `POSTGRES_ADMIN_PASSWORD_SECRET_NAME` (optional, default: `POSTGRES_ADMIN_PASSWORD`)
+- `SECRET_KEY_SECRET_NAME` (optional, default: `SECRET_KEY`)
+- `AZURE_AD_TENANT_ID_SECRET_NAME` (optional, default: `AZURE_AD_TENANT_ID`)
+- `AZURE_AD_CLIENT_ID_SECRET_NAME` (optional, default: `AZURE_AD_CLIENT_ID`)
+- `AZURE_AD_AUDIENCE_SECRET_NAME` (optional, default: `AZURE_AD_AUDIENCE`)
+
+If `KEY_VAULT_NAME` is set, the script pulls missing sensitive variables from Key Vault.
+If `KEY_VAULT_NAME` is not set, sensitive values must be provided directly as environment variables.
+
+Example:
+
+```bash
+export KEY_VAULT_NAME='kv-bead-prod'
+export SECRET_KEY_SECRET_NAME='SECRET_KEY'
+export AZURE_AD_CLIENT_ID_SECRET_NAME='AZURE_AD_CLIENT_ID'
+./scripts/deploy-api-appservice.sh
+```
+
+### Rotate Previously Exposed Keys
+
+Any previously exposed secret should be treated as compromised and rotated.
+
+1. Rotate provider-side credentials first:
+   - Base44 API key
+   - Azure OpenAI API key
+   - PostgreSQL admin password (if exposed)
+   - App `SECRET_KEY`
+
+2. Update Azure Key Vault values:
+
+```bash
+# Example: update values after rotating in source systems
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name SECRET_KEY --value "<new-secret-key>"
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name POSTGRES_ADMIN_PASSWORD --value "<new-postgres-admin-password>"
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name BASE44_API_KEY --value "<new-base44-api-key>"
+az keyvault secret set --vault-name "$KEY_VAULT_NAME" --name AZURE_OPENAI_API_KEY --value "<new-azure-openai-key>"
+```
+
+3. Redeploy API so new settings are applied:
+
+```bash
+./scripts/deploy-api-appservice.sh
+```
 
 ### 3. Add Azure AD auth
 
