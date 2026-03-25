@@ -79,6 +79,12 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-gray-900">BEAD Platform Dashboard</h1>
             <p className="mt-2 text-gray-600">Broadband Infrastructure Planning & Monitoring</p>
           </div>
+          <a
+            href="/ai-dashboard"
+            className="mt-4 md:mt-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-500 transition-colors shadow"
+          >
+            🦉 AI Executive Dashboard
+          </a>
         </div>
 
         {/* Error Message */}

@@ -13,6 +13,14 @@ RUN npm install
 # Copy application code
 COPY web/ ./
 
+# Build args for public env vars baked into the Next.js bundle
+ARG NEXT_PUBLIC_API_URL=https://bead-it.org/api
+ARG VITE_BASE44_APP_ID
+ARG VITE_BASE44_APP_BASE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV VITE_BASE44_APP_ID=$VITE_BASE44_APP_ID
+ENV VITE_BASE44_APP_BASE_URL=$VITE_BASE44_APP_BASE_URL
+
 # Expose port
 EXPOSE 3000
 
