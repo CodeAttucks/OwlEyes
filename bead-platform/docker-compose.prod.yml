@@ -53,10 +53,12 @@ services:
       args:
         - VITE_BASE44_APP_ID=${VITE_BASE44_APP_ID}
         - VITE_BASE44_APP_BASE_URL=${VITE_BASE44_APP_BASE_URL}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://bead-it.org/api}
     ports:
       - "127.0.0.1:3000:3000"  # Only expose to localhost, use reverse proxy
     environment:
       - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://bead-it.org/api}
     depends_on:
       - api
     restart: unless-stopped

@@ -8,6 +8,8 @@ app = FastAPI(dependencies=[Depends(require_auth_if_enabled)])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://bead-it.org",
+        "https://www.bead-it.org",
         "https://bead-it.base44.app",
         "http://localhost:3000",
     ],
