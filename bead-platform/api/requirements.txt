@@ -14,3 +14,4 @@ numpy
 httpx
 python-jose[cryptography]
 azure-storage-blob>=12.0.0
+openai>=1.0.0
