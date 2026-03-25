@@ -1,0 +1,79 @@
+name: 🔧 System Update
+description: Track a system, infrastructure, or dependency update
+title: '[Update] '
+labels:
+  - system-monitor
+body:
+  - type: dropdown
+    id: update_type
+    attributes:
+      label: Update Type
+      options:
+        - Backend / API
+        - Frontend / UI
+        - Database / Migrations
+        - Infrastructure / Docker / NGINX
+        - CI/CD Workflow
+        - Supabase / Edge Functions
+        - Dependency Upgrade
+        - Security Patch
+        - Configuration Change
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Target Environment
+      options:
+        - Development
+        - Staging
+        - Production
+        - All
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Update Summary
+      description: What is being changed and why?
+      placeholder: 'e.g. Upgrade FastAPI from 0.103 to 0.111 to patch CVE-2024-xxxx'
+    validations:
+      required: true
+
+  - type: textarea
+    id: changes
+    attributes:
+      label: Key Changes
+      description: List the specific files, services, or components being updated
+      placeholder: |
+        - `bead-platform/api/requirements.txt`: fastapi 0.103 → 0.111
+        - `bead-platform/api/main.py`: updated lifespan handler
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification Steps
+      description: How was the update tested or validated?
+      placeholder: |
+        - [ ] Local tests pass
+        - [ ] Staging deployment verified
+        - [ ] Rollback plan documented
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback Plan
+      description: Steps to revert this update if something goes wrong
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to PRs, workflow runs, release notes, CVEs, etc.
+      placeholder: |
+        - PR: #
+        - Release notes: https://...
+        - CVE: https://nvd.nist.gov/...

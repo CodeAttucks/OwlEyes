@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📊 View Agent Activity Reports
+    url: https://github.com/CodeAttucks/OwlEyes/issues?q=label%3Aagent-tracker
+    about: Browse auto-generated weekly agent activity reports
+  - name: 🩺 View System Health Reports
+    url: https://github.com/CodeAttucks/OwlEyes/issues?q=label%3Asystem-monitor
+    about: Browse auto-generated daily system health reports
+  - name: ⚠️ View Open Risks
+    url: https://github.com/CodeAttucks/OwlEyes/issues?q=label%3Arisk+is%3Aopen
+    about: Browse all open risk items
+  - name: 🚀 GitHub Actions — Workflow Runs
+    url: https://github.com/CodeAttucks/OwlEyes/actions
+    about: View all CI/CD and agent workflow runs

@@ -1,0 +1,70 @@
+name: ⚠️ Risk Report
+description: Report a risk, concern, or issue that needs monitoring or mitigation
+title: '[Risk] '
+labels:
+  - risk
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - 🔴 Critical — immediate action required
+        - 🟠 High — address within 24 hours
+        - 🟡 Medium — address this sprint
+        - 🟢 Low — monitor and review
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Risk Category
+      options:
+        - Security
+        - Stability / Availability
+        - Data Integrity
+        - Cost / Performance
+        - Compliance
+        - Dependency / Third-party
+        - Agent Behaviour
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Risk Description
+      description: Describe the risk or issue clearly
+      placeholder: 'e.g. Secret scanning detected a potential credential exposure in PR #12'
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential Impact
+      description: What could go wrong if this risk materialises?
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Mitigation Plan
+      description: Steps being taken or recommended to mitigate this risk
+      placeholder: |
+        - [ ] Rotate affected credentials
+        - [ ] Audit access logs
+        - [ ] Update secret scanning rules
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to relevant workflow runs, alerts, PRs, or external resources
+      placeholder: |
+        - Workflow run: https://github.com/...
+        - Alert: https://github.com/...
+        - PR: #
