@@ -39,16 +39,23 @@ jobs:
         with:
           version: latest
 
-      - name: Validate required deploy secrets
+      - name: Check deploy secrets are configured
+        id: check_secrets
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}"
-          test -n "${{ secrets.SUPABASE_PROJECT_REF }}"
-          test -n "${{ secrets.EDGE_FUNCTION_TOKEN }}"
-          test -n "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          if [[ -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}" && \
+                -n "${{ secrets.SUPABASE_PROJECT_REF }}" && \
+                -n "${{ secrets.EDGE_FUNCTION_TOKEN }}" && \
+                -n "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::One or more Supabase deployment secrets are not configured. Skipping edge function deployment. See GITHUB_SECRETS_SETUP.md for setup instructions."
+          fi
 
       - name: Push function secrets
+        if: steps.check_secrets.outputs.configured == 'true'
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -64,6 +71,7 @@ jobs:
             --project-ref "${SUPABASE_PROJECT_REF}"
 
       - name: Deploy Edge Function
+        if: steps.check_secrets.outputs.configured == 'true'
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
