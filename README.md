@@ -20,11 +20,11 @@ All `.env`, `.env.*` (except `.env.example`), and sensitive files are protected 
 Use the local admin script for read-only inspection tasks such as listing users and checking auth settings.
 
 ```bash
-SUPABASE_URL=https://vqawanftlolsplxuwipw.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key \
+SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
 node admin_Inspector.js list-users
 
-SUPABASE_URL=https://vqawanftlolsplxuwipw.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key \
+SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
 node admin_Inspector.js auth-settings
 ```
