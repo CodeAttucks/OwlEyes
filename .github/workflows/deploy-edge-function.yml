@@ -14,18 +14,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-staging-validation-edge-function:
-    name: Deploy staging-validation-report
+  smoke-check:
+    name: Pre-deploy smoke check
     runs-on: ubuntu-latest
-    environment:
-      name: supabase-production
-      url: ${{ secrets.STAGING_VALIDATION_EDGE_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Pre-deploy smoke check (merge commit)
+      - name: Run staging security validator
         shell: bash
         run: |
           set -euo pipefail
@@ -33,6 +30,20 @@ jobs:
           EXPECTED_DOMAIN=bead-it.base44.app \
           REQUIRE_TLS_CERT_FILES=0 \
           bead-platform/scripts/validate-staging-security.sh
+
+  deploy:
+    name: Deploy staging-validation-report
+    needs: smoke-check
+    runs-on: ubuntu-latest
+    # Only deploy from the main branch; skip on PR branches even if workflow is evaluated there
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: supabase-production
+      url: ${{ secrets.STAGING_VALIDATION_EDGE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
