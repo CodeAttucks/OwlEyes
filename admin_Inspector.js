@@ -3,12 +3,12 @@
  *
  * Local Node script to perform admin-only tasks against a Supabase project.
  * Usage:
- *   SUPABASE_URL=https://vqawanftlolsplxuwipw.supabase.co \
+ *   SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
  *   SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxx \
  *   node admin_Inspector.js list-users
  *
  * Or:
- *   SUPABASE_URL=https://vqawanftlolsplxuwipw.supabase.co \
+ *   SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
  *   SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxx \
  *   node admin_Inspector.js auth-settings
  *

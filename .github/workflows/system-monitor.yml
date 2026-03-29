@@ -95,12 +95,12 @@ jobs:
           # --- Code scanning alerts ---
           CODE_ALERTS=$(gh api \
             "repos/${REPO}/code-scanning/alerts?state=open&per_page=100" \
-            --jq 'length' 2>/dev/null || echo "N/A")
+            --jq 'length' 2>/dev/null) || CODE_ALERTS="N/A"
 
           # --- Secret scanning alerts ---
           SECRET_ALERTS=$(gh api \
             "repos/${REPO}/secret-scanning/alerts?state=open&per_page=100" \
-            --jq 'length' 2>/dev/null || echo "N/A")
+            --jq 'length' 2>/dev/null) || SECRET_ALERTS="N/A"
 
           # --- Assemble report ---
           {
@@ -180,6 +180,25 @@ jobs:
           # Add risk label when health is degraded or critical
           if [ "$HEALTH_STATUS" != "Healthy" ]; then
             LABELS="system-monitor,risk"
+          fi
+
+          # Close any existing open system-monitor issues for today to avoid duplicates
+          EXISTING_ISSUES=$(gh issue list \
+            --repo "$REPO" \
+            --state open \
+            --label "system-monitor" \
+            --search "System Health Report — ${TODAY} in:title" \
+            --json number \
+            --jq '.[].number' 2>/dev/null) || EXISTING_ISSUES=""
+
+          if [ -n "$EXISTING_ISSUES" ]; then
+            echo "Found existing system-monitor issue(s) for today. Closing to avoid duplicates."
+            while IFS= read -r num; do
+              echo "Closing issue #${num}"
+              gh issue close "$num" --repo "$REPO" \
+                --comment "Superseded by a new report for the same day." 2>/dev/null \
+                || echo "::warning::Failed to close issue #${num} — it will remain open alongside the new report."
+            done <<< "$EXISTING_ISSUES"
           fi
 
           gh issue create \
