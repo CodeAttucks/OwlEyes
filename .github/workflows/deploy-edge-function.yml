@@ -23,6 +23,7 @@ concurrency:
 jobs:
   smoke-check:
     name: Pre-deploy smoke check
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
