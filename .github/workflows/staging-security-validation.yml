@@ -1,6 +1,9 @@
 name: Staging Security Validation
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -10,6 +13,7 @@ permissions:
 
 jobs:
   validate-staging-security:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
