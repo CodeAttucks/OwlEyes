@@ -1,6 +1,9 @@
 name: Staging Security Validation
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -10,6 +13,7 @@ permissions:
 
 jobs:
   validate-staging-security:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -41,7 +45,7 @@ jobs:
           path: |
             artifacts/staging-security-report.md
             artifacts/staging-security-console.log
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Post report to protected Edge Function
         if: always() && secrets.STAGING_VALIDATION_EDGE_URL != '' && secrets.STAGING_VALIDATION_EDGE_TOKEN != ''

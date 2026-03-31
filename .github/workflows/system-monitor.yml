@@ -182,23 +182,23 @@ jobs:
             LABELS="system-monitor,risk"
           fi
 
-          # Close all previous open system-monitor issues to keep the issue tracker clean.
-          # Each daily report supersedes prior ones; old reports are archived as closed issues.
-          EXISTING_ISSUES=$(gh issue list \
+          # Close all open system-monitor issues (today's duplicates and previous-day reports)
+          # Each daily run supersedes all prior open reports.
+          ALL_OPEN_MONITOR_ISSUES=$(gh issue list \
             --repo "$REPO" \
             --state open \
             --label "system-monitor" \
             --json number \
-            --jq '.[].number' 2>/dev/null) || EXISTING_ISSUES=""
+            --jq '.[].number' 2>/dev/null) || ALL_OPEN_MONITOR_ISSUES=""
 
-          if [ -n "$EXISTING_ISSUES" ]; then
-            echo "Closing previous system-monitor issue(s) before creating today's report."
+          if [ -n "$ALL_OPEN_MONITOR_ISSUES" ]; then
+            echo "Closing existing open system-monitor issue(s) before creating today's report."
             while IFS= read -r num; do
               echo "Closing issue #${num}"
               gh issue close "$num" --repo "$REPO" \
-                --comment "Superseded by the daily health report for ${TODAY}." 2>/dev/null \
+                --comment "Superseded by the new daily report for ${TODAY}." 2>/dev/null \
                 || echo "::warning::Failed to close issue #${num} — it will remain open alongside the new report."
-            done <<< "$EXISTING_ISSUES"
+            done <<< "$ALL_OPEN_MONITOR_ISSUES"
           fi
 
           gh issue create \
