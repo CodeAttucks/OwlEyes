@@ -16,6 +16,7 @@ concurrency:
 jobs:
   smoke-check:
     name: Pre-deploy smoke check
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -40,7 +41,7 @@ jobs:
 
     steps:
       - name: Check deploy secrets are configured
-        id: check_secrets
+        id: check
         shell: bash
         run: |
           set -euo pipefail
