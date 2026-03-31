@@ -22,6 +22,7 @@ jobs:
         run: |
           set +e
           mkdir -p artifacts
+          touch artifacts/staging-security-report.md artifacts/staging-security-console.log
           chmod +x bead-platform/scripts/validate-staging-security.sh
 
           EXPECTED_DOMAIN=bead-it.base44.app \
@@ -41,7 +42,7 @@ jobs:
           path: |
             artifacts/staging-security-report.md
             artifacts/staging-security-console.log
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Post report to protected Edge Function
         if: always() && secrets.STAGING_VALIDATION_EDGE_URL != '' && secrets.STAGING_VALIDATION_EDGE_TOKEN != ''

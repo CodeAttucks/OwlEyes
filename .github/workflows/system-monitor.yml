@@ -95,12 +95,12 @@ jobs:
           # --- Code scanning alerts ---
           CODE_ALERTS=$(gh api \
             "repos/${REPO}/code-scanning/alerts?state=open&per_page=100" \
-            --jq 'length' 2>/dev/null) || CODE_ALERTS="N/A"
+            --jq 'length' 2>/dev/null || echo "N/A")
 
           # --- Secret scanning alerts ---
           SECRET_ALERTS=$(gh api \
             "repos/${REPO}/secret-scanning/alerts?state=open&per_page=100" \
-            --jq 'length' 2>/dev/null) || SECRET_ALERTS="N/A"
+            --jq 'length' 2>/dev/null || echo "N/A")
 
           # --- Assemble report ---
           {

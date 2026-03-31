@@ -52,11 +52,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
       - name: Check deploy secrets are configured
         id: check_secrets
         shell: bash
@@ -72,6 +67,12 @@ jobs:
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "::notice::One or more Supabase deployment secrets are not configured. Skipping edge function deployment. See GITHUB_SECRETS_SETUP.md for setup instructions."
           fi
+
+      - name: Setup Supabase CLI
+        if: steps.check_secrets.outputs.configured == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Push function secrets
         if: steps.check_secrets.outputs.configured == 'true'
