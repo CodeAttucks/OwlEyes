@@ -26,6 +26,7 @@ jobs:
         run: |
           set +e
           mkdir -p artifacts
+          touch artifacts/staging-security-report.md artifacts/staging-security-console.log
           chmod +x bead-platform/scripts/validate-staging-security.sh
 
           EXPECTED_DOMAIN=bead-it.base44.app \
