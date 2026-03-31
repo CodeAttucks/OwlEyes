@@ -9,13 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-  SUPABASE_PROJECT_ID: vqawanftlolsplxuwipw
-  NEXT_PUBLIC_SUPABASE_URL: https://vqawanftlolsplxuwipw.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_KCIF4MY_KWhI947PtnAPYg__AXV6tYa
-
 concurrency:
   group: deploy-edge-function-main
   cancel-in-progress: false
@@ -38,25 +31,14 @@ jobs:
           REQUIRE_TLS_CERT_FILES=0 \
           bead-platform/scripts/validate-staging-security.sh
 
-  deploy:
-    name: Deploy staging-validation-report
-    needs: smoke-check
+  pre-check:
+    name: Check deployment secrets
     runs-on: ubuntu-latest
-    # Only deploy from the main branch; skip on PR branches even if workflow is evaluated there
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: supabase-production
-      url: ${{ secrets.STAGING_VALIDATION_EDGE_URL }}
+
+    outputs:
+      configured: ${{ steps.check_secrets.outputs.configured }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
       - name: Check deploy secrets are configured
         id: check_secrets
         shell: bash
@@ -73,8 +55,26 @@ jobs:
             echo "::notice::One or more Supabase deployment secrets are not configured. Skipping edge function deployment. See GITHUB_SECRETS_SETUP.md for setup instructions."
           fi
 
+  deploy:
+    name: Deploy staging-validation-report
+    needs: [smoke-check, pre-check]
+    runs-on: ubuntu-latest
+    # Only deploy from the main branch when secrets are fully configured
+    if: github.ref == 'refs/heads/main' && needs.pre-check.outputs.configured == 'true'
+    environment:
+      name: supabase-production
+      url: ${{ secrets.STAGING_VALIDATION_EDGE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
       - name: Push function secrets
-        if: steps.check_secrets.outputs.configured == 'true'
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -90,7 +90,6 @@ jobs:
             --project-ref "${SUPABASE_PROJECT_REF}"
 
       - name: Deploy Edge Function
-        if: steps.check_secrets.outputs.configured == 'true'
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -102,7 +101,6 @@ jobs:
             --no-verify-jwt
 
       - name: Link Supabase project
-        if: steps.check_secrets.outputs.configured == 'true'
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -113,7 +111,6 @@ jobs:
           supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
 
       - name: Push database migrations
-        if: steps.check_secrets.outputs.configured == 'true'
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
