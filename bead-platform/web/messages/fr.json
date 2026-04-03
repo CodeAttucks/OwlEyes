@@ -1,0 +1,99 @@
+{
+  "common": {
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "noData": "Aucune donnée trouvée",
+    "back": "Retour",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "sending": "Envoi en cours…"
+  },
+  "nav": {
+    "dashboard": "Tableau de Bord",
+    "aiDashboard": "Tableau de Bord Exécutif IA",
+    "reports": "Rapports",
+    "backToDashboard": "← Retour au Tableau de Bord"
+  },
+  "dashboard": {
+    "title": "Tableau de Bord BEAD Platform",
+    "subtitle": "Planification et Surveillance des Infrastructures à Haut Débit",
+    "loadingDashboard": "Chargement du tableau de bord…",
+    "stats": {
+      "totalRoutes": "Routes Totales",
+      "totalMiles": "Milles Totaux",
+      "averageMiles": "Milles Moyens/Route"
+    },
+    "projects": {
+      "title": "Projets",
+      "columnName": "Nom du Projet",
+      "columnState": "État",
+      "columnStatus": "Statut",
+      "columnRoutes": "Routes",
+      "noProjects": "Aucun projet trouvé"
+    },
+    "fiberRoutes": {
+      "title": "Routes en Fibre",
+      "columnRouteId": "ID de Route",
+      "columnProjectId": "ID de Projet",
+      "columnMiles": "Milles",
+      "noRoutes": "Aucune route en fibre trouvée"
+    }
+  },
+  "aiDashboard": {
+    "title": "Tableau de Bord Exécutif IA",
+    "subtitle": "Analyse multi-agents · Planificateur · Risque · Conformité",
+    "runAnalysis": {
+      "title": "Lancer l'Analyse Multi-Agents",
+      "contextPlaceholder": "Optionnel : ajoutez un contexte supplémentaire pour l'IA (ex. 'Gel du budget Q3')",
+      "runButton": "▶ Lancer l'Analyse",
+      "runningButton": "Exécution des agents…",
+      "description": "Exécute les agents Planificateur → Risque → Conformité en séquence, puis synthétise une recommandation exécutive. Les résultats de haute gravité sont automatiquement diffusés sur les canaux Slack / Teams configurés."
+    },
+    "kpi": {
+      "totalProjects": "Projets Totaux",
+      "overdueProjects": "Projets en Retard",
+      "riskItems": "Éléments de Risque",
+      "highSeverityRisks": "Risques de Haute Gravité",
+      "complianceFlags": "Indicateurs de Conformité",
+      "criticalFlags": "Indicateurs Critiques"
+    },
+    "alerts": {
+      "title": "Intégrations d'Alertes",
+      "slack": "Slack",
+      "teams": "Teams",
+      "notConfigured": "⚠ non configuré",
+      "sendTest": "📡 Envoyer une Alerte Test",
+      "broadcastTitle": "Diffuser une Alerte Personnalisée",
+      "messagePlaceholder": "Entrez le message d'alerte…",
+      "broadcast": "📣 Diffuser",
+      "broadcastSent": "Alerte diffusée avec succès.",
+      "testFailed": "Échec de l'alerte test — vérifiez la connectivité API.",
+      "broadcastFailed": "Échec de la diffusion — vérifiez la configuration des webhooks.",
+      "severityInfo": "Information",
+      "severityLow": "Faible",
+      "severityMedium": "Moyen",
+      "severityHigh": "Élevé"
+    }
+  },
+  "insights": {
+    "title": "Perspectives et Analyses IA",
+    "errorTitle": "Erreur lors du Chargement des Perspectives",
+    "metrics": {
+      "costPerLocation": "Coût/Emplacement",
+      "projects": "Projets",
+      "locations": "Emplacements",
+      "fiberMiles": "Milles de Fibre",
+      "coverage": "Couverture"
+    },
+    "keyObservations": "Observations Clés"
+  },
+  "languageSwitcher": {
+    "label": "Langue",
+    "languages": {
+      "en": "English",
+      "es": "Español",
+      "fr": "Français",
+      "pt": "Português"
+    }
+  }
+}

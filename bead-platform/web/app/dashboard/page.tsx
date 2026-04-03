@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { fetchProjects, fetchFiberRoutes, fetchReports } from '../../lib/api'
+import { useI18n } from '../../lib/i18n'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
 
 interface Project {
   id: string
@@ -29,6 +31,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<FiberStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { t, formatNumber } = useI18n()
 
   useEffect(() => {
     const loadData = async () => {
@@ -65,7 +68,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-xl font-semibold">Loading dashboard...</div>
+        <div className="text-xl font-semibold">{t('dashboard.loadingDashboard')}</div>
       </div>
     )
   }
@@ -76,15 +79,18 @@ export default function Dashboard() {
         {/* Header */}
         <div className="md:flex md:items-center md:justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">BEAD Platform Dashboard</h1>
-            <p className="mt-2 text-gray-600">Broadband Infrastructure Planning & Monitoring</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('dashboard.title')}</h1>
+            <p className="mt-2 text-gray-600">{t('dashboard.subtitle')}</p>
           </div>
-          <a
-            href="/ai-dashboard"
-            className="mt-4 md:mt-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-500 transition-colors shadow"
-          >
-            🦉 AI Executive Dashboard
-          </a>
+          <div className="mt-4 md:mt-0 flex items-center gap-3">
+            <LanguageSwitcher />
+            <a
+              href="/ai-dashboard"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-500 transition-colors shadow"
+            >
+              🦉 {t('nav.aiDashboard')}
+            </a>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -98,16 +104,16 @@ export default function Dashboard() {
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-gray-500 text-sm font-medium uppercase">Total Routes</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{stats.total_routes}</div>
+              <div className="text-gray-500 text-sm font-medium uppercase">{t('dashboard.stats.totalRoutes')}</div>
+              <div className="text-3xl font-bold text-gray-900 mt-2">{formatNumber(stats.total_routes)}</div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-gray-500 text-sm font-medium uppercase">Total Miles</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{stats.total_miles.toFixed(2)}</div>
+              <div className="text-gray-500 text-sm font-medium uppercase">{t('dashboard.stats.totalMiles')}</div>
+              <div className="text-3xl font-bold text-gray-900 mt-2">{formatNumber(stats.total_miles, { maximumFractionDigits: 2 })}</div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-gray-500 text-sm font-medium uppercase">Average Miles/Route</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{stats.average_miles.toFixed(2)}</div>
+              <div className="text-gray-500 text-sm font-medium uppercase">{t('dashboard.stats.averageMiles')}</div>
+              <div className="text-3xl font-bold text-gray-900 mt-2">{formatNumber(stats.average_miles, { maximumFractionDigits: 2 })}</div>
             </div>
           </div>
         )}
@@ -115,16 +121,16 @@ export default function Dashboard() {
         {/* Projects Section */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Projects</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('dashboard.projects.title')}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Project Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">State</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Routes</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.projects.columnName')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.projects.columnState')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.projects.columnStatus')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.projects.columnRoutes')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -150,7 +156,7 @@ export default function Dashboard() {
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                      No projects found
+                      {t('dashboard.projects.noProjects')}
                     </td>
                   </tr>
                 )}
@@ -162,15 +168,15 @@ export default function Dashboard() {
         {/* Fiber Routes Section */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Fiber Routes</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('dashboard.fiberRoutes.title')}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Route ID</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Project ID</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Miles</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.fiberRoutes.columnRouteId')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.fiberRoutes.columnProjectId')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">{t('dashboard.fiberRoutes.columnMiles')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -185,7 +191,7 @@ export default function Dashboard() {
                 ) : (
                   <tr>
                     <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
-                      No fiber routes found
+                      {t('dashboard.fiberRoutes.noRoutes')}
                     </td>
                   </tr>
                 )}

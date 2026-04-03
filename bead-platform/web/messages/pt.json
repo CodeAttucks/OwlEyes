@@ -1,0 +1,99 @@
+{
+  "common": {
+    "loading": "Carregando…",
+    "error": "Erro",
+    "noData": "Nenhum dado encontrado",
+    "back": "Voltar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "sending": "Enviando…"
+  },
+  "nav": {
+    "dashboard": "Painel",
+    "aiDashboard": "Painel Executivo de IA",
+    "reports": "Relatórios",
+    "backToDashboard": "← Voltar ao Painel"
+  },
+  "dashboard": {
+    "title": "Painel da BEAD Platform",
+    "subtitle": "Planejamento e Monitoramento de Infraestrutura de Banda Larga",
+    "loadingDashboard": "Carregando painel…",
+    "stats": {
+      "totalRoutes": "Rotas Totais",
+      "totalMiles": "Milhas Totais",
+      "averageMiles": "Milhas Médias/Rota"
+    },
+    "projects": {
+      "title": "Projetos",
+      "columnName": "Nome do Projeto",
+      "columnState": "Estado",
+      "columnStatus": "Status",
+      "columnRoutes": "Rotas",
+      "noProjects": "Nenhum projeto encontrado"
+    },
+    "fiberRoutes": {
+      "title": "Rotas de Fibra",
+      "columnRouteId": "ID da Rota",
+      "columnProjectId": "ID do Projeto",
+      "columnMiles": "Milhas",
+      "noRoutes": "Nenhuma rota de fibra encontrada"
+    }
+  },
+  "aiDashboard": {
+    "title": "Painel Executivo de IA",
+    "subtitle": "Análise multiagente · Planejador · Risco · Conformidade",
+    "runAnalysis": {
+      "title": "Executar Análise Multiagente",
+      "contextPlaceholder": "Opcional: adicione contexto extra para a IA (ex.: 'Congelamento de orçamento Q3')",
+      "runButton": "▶ Executar Análise",
+      "runningButton": "Executando agentes…",
+      "description": "Executa os agentes Planejador → Risco → Conformidade em sequência e sintetiza uma recomendação executiva. Achados de alta gravidade são automaticamente transmitidos para os canais Slack / Teams configurados."
+    },
+    "kpi": {
+      "totalProjects": "Projetos Totais",
+      "overdueProjects": "Projetos Atrasados",
+      "riskItems": "Itens de Risco",
+      "highSeverityRisks": "Riscos de Alta Gravidade",
+      "complianceFlags": "Indicadores de Conformidade",
+      "criticalFlags": "Indicadores Críticos"
+    },
+    "alerts": {
+      "title": "Integrações de Alertas",
+      "slack": "Slack",
+      "teams": "Teams",
+      "notConfigured": "⚠ não configurado",
+      "sendTest": "📡 Enviar Alerta de Teste",
+      "broadcastTitle": "Transmitir Alerta Personalizado",
+      "messagePlaceholder": "Digite a mensagem de alerta…",
+      "broadcast": "📣 Transmitir",
+      "broadcastSent": "Alerta transmitido com sucesso.",
+      "testFailed": "Falha no alerta de teste — verifique a conectividade da API.",
+      "broadcastFailed": "Falha na transmissão — verifique a configuração dos webhooks.",
+      "severityInfo": "Informação",
+      "severityLow": "Baixo",
+      "severityMedium": "Médio",
+      "severityHigh": "Alto"
+    }
+  },
+  "insights": {
+    "title": "Perspectivas e Análises de IA",
+    "errorTitle": "Erro ao Carregar Perspectivas",
+    "metrics": {
+      "costPerLocation": "Custo/Local",
+      "projects": "Projetos",
+      "locations": "Locais",
+      "fiberMiles": "Milhas de Fibra",
+      "coverage": "Cobertura"
+    },
+    "keyObservations": "Observações Principais"
+  },
+  "languageSwitcher": {
+    "label": "Idioma",
+    "languages": {
+      "en": "English",
+      "es": "Español",
+      "fr": "Français",
+      "pt": "Português"
+    }
+  }
+}
