@@ -27,7 +27,7 @@
       "title": "Proyectos",
       "columnName": "Nombre del Proyecto",
       "columnState": "Estado",
-      "columnStatus": "Estado",
+      "columnStatus": "Estatus",
       "columnRoutes": "Rutas",
       "noProjects": "No se encontraron proyectos"
     },

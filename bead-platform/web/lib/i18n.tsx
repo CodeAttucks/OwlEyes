@@ -74,7 +74,12 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
   // Initialise locale from storage or browser on first render
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Locale | null
+    let stored: Locale | null = null
+    try {
+      stored = localStorage.getItem(STORAGE_KEY) as Locale | null
+    } catch {
+      // localStorage may be unavailable (e.g. private browsing, SSR)
+    }
     const resolved =
       stored && SUPPORTED_LOCALES.includes(stored) ? stored : detectBrowserLocale()
     setLocaleState(resolved)
@@ -93,7 +98,11 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   }, [locale])
 
   const setLocale = useCallback((next: Locale) => {
-    localStorage.setItem(STORAGE_KEY, next)
+    try {
+      localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      // localStorage may be unavailable
+    }
     setLocaleState(next)
   }, [])
 
