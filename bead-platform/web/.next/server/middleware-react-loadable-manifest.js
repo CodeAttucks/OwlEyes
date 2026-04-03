@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"lib/i18n.tsx -> ../messages/en.json":{"id":759,"files":["static/chunks/759.1be2410d249fcd3c.js"]}}';
