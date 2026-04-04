@@ -36,8 +36,12 @@ jobs:
     name: Check deployment secrets
     runs-on: ubuntu-latest
 
+    outputs:
+      configured: ${{ steps.check_secrets.outputs.configured }}
+
+    steps:
       - name: Check deploy secrets are configured
-        id: check
+        id: check_secrets
         shell: bash
         run: |
           set -euo pipefail
@@ -52,8 +56,21 @@ jobs:
             echo "::notice::One or more Supabase deployment secrets are not configured. Skipping edge function deployment. See GITHUB_SECRETS_SETUP.md for setup instructions."
           fi
 
+  deploy:
+    name: Deploy staging-validation-report
+    needs: [smoke-check, pre-check]
+    runs-on: ubuntu-latest
+    # Only deploy from the main branch when secrets are fully configured
+    if: github.ref == 'refs/heads/main' && needs.pre-check.outputs.configured == 'true'
+    environment:
+      name: supabase-production
+      url: ${{ secrets.STAGING_VALIDATION_EDGE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Supabase CLI
-        if: steps.check_secrets.outputs.configured == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: latest
