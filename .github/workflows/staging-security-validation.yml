@@ -20,6 +20,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Capture Datadog start time
+        id: datadog_meta
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Run staging security validator
         id: validate
         shell: bash
@@ -74,3 +80,45 @@ jobs:
         run: |
           echo "Validator failed with exit code ${{ steps.validate.outputs.exit_code }}"
           exit 1
+
+      - name: Send Datadog CI metrics
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          DD_ENV: ${{ vars.DD_ENV }}
+          DD_SERVICE: ${{ vars.DD_SERVICE }}
+          DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
+          DD_JOB_STATUS: ${{ job.status }}
+          DD_PIPELINE_TYPE: ci
+        run: |
+          set -uo pipefail
+          site="${DD_SITE:-datadoghq.com}"
+          env_name="${DD_ENV:-ci}"
+          service="${DD_SERVICE:-owleyes-github-actions}"
+          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          started="${{ steps.datadog_meta.outputs.start_epoch }}"
+          now=$(date +%s)
+          duration=0
+          if [[ -n "$started" ]]; then
+            duration=$((now - started))
+          fi
+          tags="repo:${GITHUB_REPOSITORY},workflow:${GITHUB_WORKFLOW},job:${GITHUB_JOB},branch:${branch},event:${GITHUB_EVENT_NAME},status:${DD_JOB_STATUS},env:${env_name},service:${service},pipeline_type:${DD_PIPELINE_TYPE},provider:github,runner:github-actions"
+          if [[ -n "${DD_EXTRA_TAGS:-}" ]]; then
+            tags="${tags},${DD_EXTRA_TAGS}"
+          fi
+          payload=$(jq -n \
+            --argjson now "$now" \
+            --argjson duration "$duration" \
+            --arg tags "$tags" \
+            '{series: [
+              {metric: "owleyes.github_actions.job.duration_seconds", points: [[$now, $duration]], type: "gauge", tags: ($tags | split(","))},
+              {metric: "owleyes.github_actions.job.completed", points: [[$now, 1]], type: "count", tags: ($tags | split(","))}
+            ]}')
+          curl --silent --show-error --fail \
+            -X POST "https://api.${site}/api/v1/series" \
+            -H "Content-Type: application/json" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -d "$payload" >/dev/null \
+            || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"
