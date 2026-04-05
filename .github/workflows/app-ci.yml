@@ -1,6 +1,9 @@
-name: Deploy Edge Function
+name: App CI
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -10,13 +13,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-edge-function-main
-  cancel-in-progress: false
+  group: app-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  smoke-check:
-    name: Pre-deploy smoke check
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+  migration-checks:
+    name: Migration checks (Supabase)
     runs-on: ubuntu-latest
 
     steps:
@@ -29,16 +31,23 @@ jobs:
         shell: bash
         run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-      - name: Run staging security validator
+      - name: Validate migration files
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x bead-platform/scripts/validate-staging-security.sh
-          EXPECTED_DOMAIN=bead-it.base44.app \
-          REQUIRE_TLS_CERT_FILES=0 \
-          bead-platform/scripts/validate-staging-security.sh
+          if grep -RInE 'Replace this placeholder|Placeholder migration executed' supabase/migrations; then
+            echo "::error::Placeholder migration content detected in supabase/migrations. Replace it with a real migration or an explicit historical no-op."
+            exit 1
+          fi
 
-      - name: Send Datadog deploy metrics
+          find supabase/migrations -type f -name '*.sql' -print0 | while IFS= read -r -d '' file; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error file=${file}::Migration file is empty."
+              exit 1
+            fi
+          done
+
+      - name: Send Datadog CI metrics
         if: always() && secrets.DD_API_KEY != ''
         shell: bash
         env:
@@ -48,7 +57,7 @@ jobs:
           DD_SERVICE: ${{ vars.DD_SERVICE }}
           DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
           DD_JOB_STATUS: ${{ job.status }}
-          DD_PIPELINE_TYPE: deploy
+          DD_PIPELINE_TYPE: ci
         run: |
           set -uo pipefail
           site="${DD_SITE:-datadoghq.com}"
@@ -80,74 +89,13 @@ jobs:
             -d "$payload" >/dev/null \
             || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"
 
-  pre-check:
-    name: Check deployment secrets
+  backend-checks:
+    name: Backend checks (Python)
     runs-on: ubuntu-latest
 
-    outputs:
-      configured: ${{ steps.check_secrets.outputs.configured }}
-
-    steps:
-      - name: Check deploy secrets are configured
-        id: check_secrets
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}" && \
-                -n "${{ secrets.SUPABASE_PROJECT_REF }}" && \
-                -n "${{ secrets.EDGE_FUNCTION_TOKEN }}" && \
-                -n "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" && \
-                -n "${{ secrets.SUPABASE_DB_PASSWORD }}" ]]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::One or more Supabase deployment secrets are not configured. Skipping edge function deployment. See GITHUB_SECRETS_SETUP.md for setup instructions."
-          fi
-
-      - name: Send Datadog deploy metrics
-        if: always() && secrets.DD_API_KEY != ''
-        shell: bash
-        env:
-          DD_API_KEY: ${{ secrets.DD_API_KEY }}
-          DD_SITE: ${{ vars.DD_SITE }}
-          DD_ENV: ${{ vars.DD_ENV }}
-          DD_SERVICE: ${{ vars.DD_SERVICE }}
-          DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
-          DD_JOB_STATUS: ${{ job.status }}
-          DD_PIPELINE_TYPE: deploy
-        run: |
-          set -uo pipefail
-          site="${DD_SITE:-datadoghq.com}"
-          env_name="${DD_ENV:-ci}"
-          service="${DD_SERVICE:-owleyes-github-actions}"
-          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          now=$(date +%s)
-          tags="repo:${GITHUB_REPOSITORY},workflow:${GITHUB_WORKFLOW},job:${GITHUB_JOB},branch:${branch},event:${GITHUB_EVENT_NAME},status:${DD_JOB_STATUS},env:${env_name},service:${service},pipeline_type:${DD_PIPELINE_TYPE},provider:github,runner:github-actions"
-          if [[ -n "${DD_EXTRA_TAGS:-}" ]]; then
-            tags="${tags},${DD_EXTRA_TAGS}"
-          fi
-          payload=$(jq -n \
-            --argjson now "$now" \
-            --arg tags "$tags" \
-            '{series: [
-              {metric: "owleyes.github_actions.job.completed", points: [[$now, 1]], type: "count", tags: ($tags | split(","))}
-            ]}')
-          curl --silent --show-error --fail \
-            -X POST "https://api.${site}/api/v1/series" \
-            -H "Content-Type: application/json" \
-            -H "DD-API-KEY: ${DD_API_KEY}" \
-            -d "$payload" >/dev/null \
-            || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"
-
-  deploy:
-    name: Deploy staging-validation-report
-    needs: [smoke-check, pre-check]
-    runs-on: ubuntu-latest
-    # Only deploy from the main branch when secrets are fully configured
-    if: github.ref == 'refs/heads/main' && needs.pre-check.outputs.configured == 'true'
-    environment:
-      name: supabase-production
-      url: ${{ secrets.STAGING_VALIDATION_EDGE_URL }}
+    defaults:
+      run:
+        working-directory: bead-platform
 
     steps:
       - name: Checkout
@@ -159,58 +107,23 @@ jobs:
         shell: bash
         run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          version: latest
+          python-version: "3.11"
 
-      - name: Push function secrets
-        shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          EDGE_FUNCTION_TOKEN: ${{ secrets.EDGE_FUNCTION_TOKEN }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Install backend dependencies
         run: |
           set -euo pipefail
-          supabase secrets set \
-            EDGE_FUNCTION_TOKEN="${EDGE_FUNCTION_TOKEN}" \
-            SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co" \
-            SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY}" \
-            --project-ref "${SUPABASE_PROJECT_REF}"
+          python -m pip install --upgrade pip
+          pip install -r api/requirements.txt
 
-      - name: Deploy Edge Function
-        shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      - name: Validate backend syntax
         run: |
           set -euo pipefail
-          supabase functions deploy staging-validation-report \
-            --project-ref "${SUPABASE_PROJECT_REF}" \
-            --no-verify-jwt
+          python -m compileall -q api
 
-      - name: Link Supabase project
-        shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_ID: vqawanftlolsplxuwipw
-        run: |
-          set -euo pipefail
-          supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
-
-      - name: Push database migrations
-        shell: bash
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_ID: vqawanftlolsplxuwipw
-        run: |
-          set -euo pipefail
-          supabase db push
-
-      - name: Send Datadog deploy metrics
+      - name: Send Datadog CI metrics
         if: always() && secrets.DD_API_KEY != ''
         shell: bash
         env:
@@ -220,7 +133,94 @@ jobs:
           DD_SERVICE: ${{ vars.DD_SERVICE }}
           DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
           DD_JOB_STATUS: ${{ job.status }}
-          DD_PIPELINE_TYPE: deploy
+          DD_PIPELINE_TYPE: ci
+        run: |
+          set -uo pipefail
+          site="${DD_SITE:-datadoghq.com}"
+          env_name="${DD_ENV:-ci}"
+          service="${DD_SERVICE:-owleyes-github-actions}"
+          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          started="${{ steps.datadog_meta.outputs.start_epoch }}"
+          now=$(date +%s)
+          duration=0
+          if [[ -n "$started" ]]; then
+            duration=$((now - started))
+          fi
+          tags="repo:${GITHUB_REPOSITORY},workflow:${GITHUB_WORKFLOW},job:${GITHUB_JOB},branch:${branch},event:${GITHUB_EVENT_NAME},status:${DD_JOB_STATUS},env:${env_name},service:${service},pipeline_type:${DD_PIPELINE_TYPE},provider:github,runner:github-actions"
+          if [[ -n "${DD_EXTRA_TAGS:-}" ]]; then
+            tags="${tags},${DD_EXTRA_TAGS}"
+          fi
+          payload=$(jq -n \
+            --argjson now "$now" \
+            --argjson duration "$duration" \
+            --arg tags "$tags" \
+            '{series: [
+              {metric: "owleyes.github_actions.job.duration_seconds", points: [[$now, $duration]], type: "gauge", tags: ($tags | split(","))},
+              {metric: "owleyes.github_actions.job.completed", points: [[$now, 1]], type: "count", tags: ($tags | split(","))}
+            ]}')
+          curl --silent --show-error --fail \
+            -X POST "https://api.${site}/api/v1/series" \
+            -H "Content-Type: application/json" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -d "$payload" >/dev/null \
+            || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"
+
+  frontend-checks:
+    name: Frontend checks (Next.js)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bead-platform/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Capture Datadog start time
+        id: datadog_meta
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: bead-platform/web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          set -euo pipefail
+          npm test
+
+      - name: Typecheck frontend
+        run: |
+          set -euo pipefail
+          npx tsc --noEmit
+
+      - name: Build frontend
+        run: |
+          set -euo pipefail
+          npm run build
+
+      - name: Send Datadog CI metrics
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          DD_ENV: ${{ vars.DD_ENV }}
+          DD_SERVICE: ${{ vars.DD_SERVICE }}
+          DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
+          DD_JOB_STATUS: ${{ job.status }}
+          DD_PIPELINE_TYPE: ci
         run: |
           set -uo pipefail
           site="${DD_SITE:-datadoghq.com}"
