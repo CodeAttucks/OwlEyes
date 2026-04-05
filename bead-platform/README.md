@@ -134,6 +134,25 @@ The application will be available at:
 - **Export Functionality** - Download data as Excel files
 - **AI Insights** - Automated analysis with recommendations
 
+## Datadog LLM Observability
+
+The API can emit Datadog LLM Observability spans for the OpenAI and Azure OpenAI calls used by the AI recommendation flow.
+
+Enable it by setting these environment variables before starting the API:
+
+```env
+DD_LLMOBS_ENABLED=true
+DD_API_KEY=your_datadog_api_key
+DD_SITE=us3.datadoghq.com
+DD_ENV=production
+DD_SERVICE=owleyes-api
+DD_LLMOBS_ML_APP=owleyes-ai
+DD_LLMOBS_AGENTLESS_ENABLED=true
+DD_LLMOBS_PROJECT_NAME=bead-platform
+```
+
+Once enabled, the API startup bootstraps `ddtrace`, patches the `openai` client, and sends LLM telemetry for the backend AI endpoints automatically.
+
 ### API Endpoints
 
 **Projects**

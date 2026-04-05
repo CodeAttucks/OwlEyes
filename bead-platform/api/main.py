@@ -1,9 +1,15 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .auth import require_auth_if_enabled
+from .observability import configure_llm_observability
 from .routers import projects, fiber, reports, uploads, ml, base44_proxy, ai
 
 app = FastAPI(dependencies=[Depends(require_auth_if_enabled)])
+
+
+@app.on_event("startup")
+def startup_observability() -> None:
+    configure_llm_observability()
 
 app.add_middleware(
     CORSMiddleware,
