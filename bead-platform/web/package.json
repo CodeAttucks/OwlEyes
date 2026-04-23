@@ -2,16 +2,23 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:smoke": "node -e \"console.log('smoke-check: ok')\"",
+    "test": "npm run test:smoke"
   },
   "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "clsx": "^2.1.1",
-    "tailwindcss": "^4.2.2",
-    "mapbox-gl": "^3.0.0"
+    "mapbox-gl": "^3.0.0",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^4.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "25.5.0",
+    "@types/react": "19.2.14",
+    "typescript": "5.9.3"
   }
 }

@@ -1,0 +1,184 @@
+name: Project Board Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_title:
+        description: 'GitHub Project title'
+        required: false
+        default: 'OwlEyes Operations Tracker'
+
+# Requires a Personal Access Token (PAT) with `project` scope stored as GH_PAT secret.
+# The default GITHUB_TOKEN does not have project write permissions.
+# Steps to set up:
+#   1. Create a PAT at https://github.com/settings/tokens with scopes: repo, project
+#   2. Add it as a repository secret named GH_PAT
+#   3. Run this workflow manually from the Actions tab
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  setup-project-board:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate PAT availability
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -z "${GH_PAT:-}" ]; then
+            echo "::warning::GH_PAT secret is not set. Project board creation requires a PAT with 'project' scope."
+            echo "::warning::Add a PAT as the GH_PAT repository secret, then re-run this workflow."
+            echo "::warning::See: https://docs.github.com/en/issues/planning-and-tracking-with-projects/creating-projects/creating-a-project"
+            echo "skip=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Create GitHub Project v2
+        if: env.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+          PROJECT_TITLE: ${{ github.event.inputs.project_title }}
+        run: |
+          set -euo pipefail
+
+          OWNER=$(echo "$REPO" | cut -d/ -f1)
+
+          # Resolve owner node ID (org or user)
+          OWNER_ID=$(gh api graphql -f query='
+            query($login: String!) {
+              organization(login: $login) { id }
+            }' -f login="$OWNER" \
+            --jq '.data.organization.id' 2>/dev/null || \
+          gh api graphql -f query='
+            query($login: String!) {
+              user(login: $login) { id }
+            }' -f login="$OWNER" \
+            --jq '.data.user.id')
+
+          echo "Owner ID: $OWNER_ID"
+
+          # Create the project
+          PROJECT_DATA=$(gh api graphql -f query='
+            mutation($ownerId: ID!, $title: String!) {
+              createProjectV2(input: {ownerId: $ownerId, title: $title}) {
+                projectV2 { id number url }
+              }
+            }' \
+            -f ownerId="$OWNER_ID" \
+            -f title="$PROJECT_TITLE")
+
+          PROJECT_ID=$(echo "$PROJECT_DATA" | jq -r '.data.createProjectV2.projectV2.id')
+          PROJECT_URL=$(echo "$PROJECT_DATA" | jq -r '.data.createProjectV2.projectV2.url')
+          PROJECT_NUM=$(echo "$PROJECT_DATA" | jq -r '.data.createProjectV2.projectV2.number')
+
+          echo "Created project: $PROJECT_URL"
+          echo "project_url=$PROJECT_URL" >> "$GITHUB_ENV"
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_ENV"
+
+      - name: Add custom fields to project
+        if: env.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PROJECT_ID: ${{ env.project_id }}
+        run: |
+          set -euo pipefail
+
+          # Add Priority field (single select)
+          gh api graphql -f query='
+            mutation($projectId: ID!) {
+              createProjectV2Field(input: {
+                projectId: $projectId
+                dataType: SINGLE_SELECT
+                name: "Priority"
+                singleSelectOptions: [
+                  { name: "🔴 Critical", color: RED,    description: "Immediate action required" }
+                  { name: "🟡 High",     color: YELLOW, description: "Address within 24 hours" }
+                  { name: "🟢 Normal",   color: GREEN,  description: "Standard priority" }
+                ]
+              }) { projectV2Field { ... on ProjectV2SingleSelectField { id name } } }
+            }' -f projectId="$PROJECT_ID" > /dev/null
+
+          # Add Type field (single select)
+          gh api graphql -f query='
+            mutation($projectId: ID!) {
+              createProjectV2Field(input: {
+                projectId: $projectId
+                dataType: SINGLE_SELECT
+                name: "Type"
+                singleSelectOptions: [
+                  { name: "🤖 Agent Task",     color: BLUE,   description: "AI agent workflow item" }
+                  { name: "🔧 System Update",  color: PURPLE, description: "Infrastructure or code change" }
+                  { name: "⚠️ Risk",           color: RED,    description: "Risk or issue to monitor" }
+                  { name: "📋 Tracking",       color: GRAY,   description: "Informational tracking item" }
+                ]
+              }) { projectV2Field { ... on ProjectV2SingleSelectField { id name } } }
+            }' -f projectId="$PROJECT_ID" > /dev/null
+
+          # Add Sprint/Week field (iteration)
+          gh api graphql -f query='
+            mutation($projectId: ID!) {
+              createProjectV2Field(input: {
+                projectId: $projectId
+                dataType: ITERATION
+                name: "Sprint"
+              }) { projectV2Field { ... on ProjectV2IterationField { id name } } }
+            }' -f projectId="$PROJECT_ID" > /dev/null
+
+          echo "Custom fields added."
+
+      - name: Link repository to project
+        if: env.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+          PROJECT_ID: ${{ env.project_id }}
+        run: |
+          set -euo pipefail
+
+          REPO_ID=$(gh api "repos/${REPO}" --jq '.node_id')
+
+          gh api graphql -f query='
+            mutation($projectId: ID!, $repositoryId: ID!) {
+              linkProjectV2ToRepository(input: {projectId: $projectId, repositoryId: $repositoryId}) {
+                repository { name }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f repositoryId="$REPO_ID" > /dev/null
+
+          echo "Repository linked to project."
+
+      - name: Report project URL
+        if: env.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PROJECT_URL: ${{ env.project_url }}
+          PROJECT_TITLE: ${{ github.event.inputs.project_title }}
+        run: |
+          gh issue create \
+            --repo "$REPO" \
+            --title "📋 Project Board Created: ${PROJECT_TITLE}" \
+            --body "The GitHub Project board **${PROJECT_TITLE}** has been created.
+
+          **URL:** ${PROJECT_URL}
+
+          ### Included Fields
+          - **Priority** (Critical / High / Normal)
+          - **Type** (Agent Task / System Update / Risk / Tracking)
+          - **Sprint** (Iteration field for weekly sprints)
+
+          ### Linked Resources
+          - Repository: \`${REPO}\`
+          - Agent Activity Tracker issues (label: \`agent-tracker\`)
+          - System Monitor issues (label: \`system-monitor\`, \`risk\`)
+
+          ### Next Steps
+          1. Open the project board at the URL above
+          2. Add existing issues to the board
+          3. Configure views (Board, Table, Roadmap) to suit your workflow
+          " \
+            --label "agent-tracker"

@@ -1,0 +1,253 @@
+name: App CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-checks:
+    name: Migration checks (Supabase)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Capture Datadog start time
+        id: datadog_meta
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate migration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE 'Replace this placeholder|Placeholder migration executed' supabase/migrations; then
+            echo "::error::Placeholder migration content detected in supabase/migrations. Replace it with a real migration or an explicit historical no-op."
+            exit 1
+          fi
+
+          find supabase/migrations -type f -name '*.sql' -print0 | while IFS= read -r -d '' file; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error file=${file}::Migration file is empty."
+              exit 1
+            fi
+          done
+
+      - name: Send Datadog CI metrics
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          DD_ENV: ${{ vars.DD_ENV }}
+          DD_SERVICE: ${{ vars.DD_SERVICE }}
+          DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
+          DD_JOB_STATUS: ${{ job.status }}
+          DD_PIPELINE_TYPE: ci
+        run: |
+          set -uo pipefail
+          site="${DD_SITE:-datadoghq.com}"
+          env_name="${DD_ENV:-ci}"
+          service="${DD_SERVICE:-owleyes-github-actions}"
+          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          started="${{ steps.datadog_meta.outputs.start_epoch }}"
+          now=$(date +%s)
+          duration=0
+          if [[ -n "$started" ]]; then
+            duration=$((now - started))
+          fi
+          tags="repo:${GITHUB_REPOSITORY},workflow:${GITHUB_WORKFLOW},job:${GITHUB_JOB},branch:${branch},event:${GITHUB_EVENT_NAME},status:${DD_JOB_STATUS},env:${env_name},service:${service},pipeline_type:${DD_PIPELINE_TYPE},provider:github,runner:github-actions"
+          if [[ -n "${DD_EXTRA_TAGS:-}" ]]; then
+            tags="${tags},${DD_EXTRA_TAGS}"
+          fi
+          payload=$(jq -n \
+            --argjson now "$now" \
+            --argjson duration "$duration" \
+            --arg tags "$tags" \
+            '{series: [
+              {metric: "owleyes.github_actions.job.duration_seconds", points: [[$now, $duration]], type: "gauge", tags: ($tags | split(","))},
+              {metric: "owleyes.github_actions.job.completed", points: [[$now, 1]], type: "count", tags: ($tags | split(","))}
+            ]}')
+          curl --silent --show-error --fail \
+            -X POST "https://api.${site}/api/v1/series" \
+            -H "Content-Type: application/json" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -d "$payload" >/dev/null \
+            || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"
+
+  backend-checks:
+    name: Backend checks (Python)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bead-platform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Capture Datadog start time
+        id: datadog_meta
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r api/requirements.txt
+
+      - name: Validate backend syntax
+        run: |
+          set -euo pipefail
+          python -m compileall -q api
+
+      - name: Send Datadog CI metrics
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          DD_ENV: ${{ vars.DD_ENV }}
+          DD_SERVICE: ${{ vars.DD_SERVICE }}
+          DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
+          DD_JOB_STATUS: ${{ job.status }}
+          DD_PIPELINE_TYPE: ci
+        run: |
+          set -uo pipefail
+          site="${DD_SITE:-datadoghq.com}"
+          env_name="${DD_ENV:-ci}"
+          service="${DD_SERVICE:-owleyes-github-actions}"
+          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          started="${{ steps.datadog_meta.outputs.start_epoch }}"
+          now=$(date +%s)
+          duration=0
+          if [[ -n "$started" ]]; then
+            duration=$((now - started))
+          fi
+          tags="repo:${GITHUB_REPOSITORY},workflow:${GITHUB_WORKFLOW},job:${GITHUB_JOB},branch:${branch},event:${GITHUB_EVENT_NAME},status:${DD_JOB_STATUS},env:${env_name},service:${service},pipeline_type:${DD_PIPELINE_TYPE},provider:github,runner:github-actions"
+          if [[ -n "${DD_EXTRA_TAGS:-}" ]]; then
+            tags="${tags},${DD_EXTRA_TAGS}"
+          fi
+          payload=$(jq -n \
+            --argjson now "$now" \
+            --argjson duration "$duration" \
+            --arg tags "$tags" \
+            '{series: [
+              {metric: "owleyes.github_actions.job.duration_seconds", points: [[$now, $duration]], type: "gauge", tags: ($tags | split(","))},
+              {metric: "owleyes.github_actions.job.completed", points: [[$now, 1]], type: "count", tags: ($tags | split(","))}
+            ]}')
+          curl --silent --show-error --fail \
+            -X POST "https://api.${site}/api/v1/series" \
+            -H "Content-Type: application/json" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -d "$payload" >/dev/null \
+            || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"
+
+  frontend-checks:
+    name: Frontend checks (Next.js)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: bead-platform/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Capture Datadog start time
+        id: datadog_meta
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        run: echo "start_epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: bead-platform/web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          set -euo pipefail
+          npm test
+
+      - name: Typecheck frontend
+        run: |
+          set -euo pipefail
+          npx tsc --noEmit
+
+      - name: Build frontend
+        run: |
+          set -euo pipefail
+          npm run build
+
+      - name: Send Datadog CI metrics
+        if: always() && secrets.DD_API_KEY != ''
+        shell: bash
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          DD_ENV: ${{ vars.DD_ENV }}
+          DD_SERVICE: ${{ vars.DD_SERVICE }}
+          DD_EXTRA_TAGS: ${{ vars.DD_EXTRA_TAGS }}
+          DD_JOB_STATUS: ${{ job.status }}
+          DD_PIPELINE_TYPE: ci
+        run: |
+          set -uo pipefail
+          site="${DD_SITE:-datadoghq.com}"
+          env_name="${DD_ENV:-ci}"
+          service="${DD_SERVICE:-owleyes-github-actions}"
+          branch="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          started="${{ steps.datadog_meta.outputs.start_epoch }}"
+          now=$(date +%s)
+          duration=0
+          if [[ -n "$started" ]]; then
+            duration=$((now - started))
+          fi
+          tags="repo:${GITHUB_REPOSITORY},workflow:${GITHUB_WORKFLOW},job:${GITHUB_JOB},branch:${branch},event:${GITHUB_EVENT_NAME},status:${DD_JOB_STATUS},env:${env_name},service:${service},pipeline_type:${DD_PIPELINE_TYPE},provider:github,runner:github-actions"
+          if [[ -n "${DD_EXTRA_TAGS:-}" ]]; then
+            tags="${tags},${DD_EXTRA_TAGS}"
+          fi
+          payload=$(jq -n \
+            --argjson now "$now" \
+            --argjson duration "$duration" \
+            --arg tags "$tags" \
+            '{series: [
+              {metric: "owleyes.github_actions.job.duration_seconds", points: [[$now, $duration]], type: "gauge", tags: ($tags | split(","))},
+              {metric: "owleyes.github_actions.job.completed", points: [[$now, 1]], type: "count", tags: ($tags | split(","))}
+            ]}')
+          curl --silent --show-error --fail \
+            -X POST "https://api.${site}/api/v1/series" \
+            -H "Content-Type: application/json" \
+            -H "DD-API-KEY: ${DD_API_KEY}" \
+            -d "$payload" >/dev/null \
+            || echo "::warning::Failed to send Datadog metrics for ${GITHUB_JOB}"

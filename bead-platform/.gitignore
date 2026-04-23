@@ -1,0 +1,16 @@
+# Local environment secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Node dependencies
+web/node_modules/
+
+# Next.js build output
+web/.next/
+web/tsconfig.tsbuildinfo

@@ -1,39 +1,30 @@
-# **Welcome to your Base44 project** 
+# Welcome to BEAD_IT!
 
-**About**
+An all-in-one program management dashboard for tracking BEAD-funded electrical and broadband infrastructure projects, from supply chain and vendor compliance to environmental permitting.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+Project space: https://beadit.atlassian.net/wiki/spaces/KAN/pages/524289/What+is+BEAD_IT
 
-This project contains everything you need to run your app locally.
+## 🔐 Security & Environment Setup
 
-**Edit the code in your local development environment**
+**⚠️ IMPORTANT:** Never commit sensitive credentials to version control.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+- **[GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md)** — Comprehensive guide for setting up GitHub & Supabase environment secrets
+- **[CREDENTIAL_ROTATION.md](CREDENTIAL_ROTATION.md)** — How to handle exposed credentials and rotate keys
+- **[bead-platform/.env.example](bead-platform/.env.example)** — Backend environment variables template
+- **[bead-platform/.env.production.example](bead-platform/.env.production.example)** — Production environment template
 
-**Prerequisites:** 
+All `.env`, `.env.*` (except `.env.example`), and sensitive files are protected by `.gitignore`.
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+## Admin Inspector (Supabase)
 
+Use the local admin script for read-only inspection tasks such as listing users and checking auth settings.
+
+```bash
+SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+node admin_Inspector.js list-users
+
+SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+node admin_Inspector.js auth-settings
 ```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)

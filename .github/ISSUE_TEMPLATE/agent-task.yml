@@ -1,0 +1,64 @@
+name: 🤖 Agent Task
+description: Track a task assigned to or completed by an AI coding agent (Copilot, etc.)
+title: '[Agent] '
+labels:
+  - agent-tracker
+body:
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      description: Which AI agent is performing this task?
+      options:
+        - Copilot SWE Agent
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status
+      options:
+        - Queued
+        - In Progress
+        - Review Needed
+        - Done
+        - Cancelled
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What should the agent accomplish?
+      placeholder: 'e.g. Add input validation to the /api/projects endpoint'
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Related Resources
+      description: Links to relevant PRs, issues, docs, or workflow runs
+      placeholder: |
+        - PR: #
+        - Workflow run: https://github.com/...
+        - Related issue: #
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know the task is done?
+      placeholder: |
+        - [ ] Unit tests pass
+        - [ ] PR reviewed and merged
+        - [ ] Docs updated
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / Notes
+      description: Known risks, limitations, or notes for reviewers
